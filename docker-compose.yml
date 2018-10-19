@@ -1,0 +1,12 @@
+version: "3"
+services:
+  angular:
+    build: "./"
+    image: "angular.05aa711412907ce87d2c3ebc39dd8ee8"
+    ports:
+      - "4200:4200"
+      - "9876:9876"
+    user: "node"
+    volumes:
+      - "./:/home/node/myapp"
+    working_dir: "/home/node/myapp"
