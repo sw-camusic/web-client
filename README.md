@@ -1,3 +1,24 @@
+# 開発の始め方
+## docker-compose up
+```
+$ docker-compose up --detach
+```
+
+## サーバの立ち上げ
+```
+$ docker-compose exec angular ng serve --host 0.0.0.0
+```
+
+## テストの実行
+```
+$ docker-compose exec angular ng test
+```
+
+## lintの適用
+```
+$ docker-compose exec angular ng lint myapp
+```
+
 # Myapp
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 6.2.5.
