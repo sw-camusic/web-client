@@ -1,4 +1,9 @@
-<video [height]="videoHeight"
-       [width]="videoWidth"
-       #video
-       autoplay></video>
+<div [ngClass]="{ loaded: !isLoading, loading: isLoading }">
+  Loading...
+</div>
+<video [height]="height"
+       [width]="width"
+       #video></video>
+<canvas [height]="height"
+        [width]="width"
+        id="canvas"></canvas>

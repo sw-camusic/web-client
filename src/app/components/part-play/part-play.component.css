@@ -1,7 +1,25 @@
-video  {
+canvas  {
   bottom: 0;
   left: 0;
   margin: auto;
+  position: fixed;
+  right: 0;
+  top: 0;
+}
+
+video {
+  display: none;
+}
+
+.loaded {
+  display: none;
+}
+
+.loading {
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #ffffff;
+  left: 0;
   position: fixed;
   right: 0;
   top: 0;
