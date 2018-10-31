@@ -12,7 +12,6 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
   public isLoading: boolean;
   public width: number;
 
-  private loop: () => void;
   private openCv: any;
   private openCvCap: any;
   private openCvDst: any;
@@ -28,16 +27,17 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     script.setAttribute("src", "/assets/opencv.js");
     this.video.nativeElement.parentElement.appendChild(script);
 
+    let loop: () => void = () => {
+      let begin: number = Date.now();
+      this.onOpenCvLoop();
+      setTimeout(loop, 1000 / this.fps - (Date.now() - begin));
+    };
+
     let readyPolling: () => void = () => {
       if (window["cv"] !== undefined && window["cv"].Mat !== undefined) {
         this.isLoading = false;
-
-        this.openCv = window["cv"];
-        this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
-        this.openCvDst = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
-        this.openCvSrc = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
-
-        setTimeout(this.loop, 0);
+        this.onOpenCvInit();
+        setTimeout(loop, 0);
       } else {
         setTimeout(readyPolling, 1000);
       }
@@ -52,17 +52,6 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     this.isLoading = true;
     this.width = Math.floor(window.innerWidth * 0.9);
 
-    this.loop = () => {
-      let begin: number = Date.now();
-
-      this.openCvCap.read(this.openCvSrc);
-      this.openCv.cvtColor(this.openCvSrc, this.openCvDst, this.openCv.COLOR_RGBA2GRAY);
-      this.openCv.imshow("canvas", this.openCvDst);
-
-      let delay: number = 1000 / this.fps - (Date.now() - begin);
-      setTimeout(this.loop, delay);
-    };
-
     navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
@@ -72,6 +61,19 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
       this.video.nativeElement.srcObject = value;
       this.video.nativeElement.play();
     });
+  }
+
+  public onOpenCvInit(): void {
+    this.openCv = window["cv"];
+    this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
+    this.openCvDst = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
+    this.openCvSrc = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
+  }
+
+  public onOpenCvLoop(): void {
+    this.openCvCap.read(this.openCvSrc);
+    this.openCv.cvtColor(this.openCvSrc, this.openCvDst, this.openCv.COLOR_RGBA2GRAY);
+    this.openCv.imshow("canvas", this.openCvDst);
   }
 
 }
