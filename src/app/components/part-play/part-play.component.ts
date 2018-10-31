@@ -27,13 +27,13 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     script.setAttribute("src", "/assets/opencv.js");
     this.video.nativeElement.parentElement.appendChild(script);
 
-    let loop: () => void = () => {
-      let begin: number = Date.now();
+    const loop: () => void = () => {
+      const begin: number = Date.now();
       this.onOpenCvLoop();
       setTimeout(loop, 1000 / this.fps - (Date.now() - begin));
     };
 
-    let readyPolling: () => void = () => {
+    const readyPolling: () => void = () => {
       if (window["cv"] !== undefined && window["cv"].Mat !== undefined) {
         this.isLoading = false;
         this.onOpenCvInit();
