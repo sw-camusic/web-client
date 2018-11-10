@@ -1,9 +1,17 @@
 <div [ngClass]="{ loaded: !isLoading, loading: isLoading }">
   Loading...
 </div>
+
 <video [height]="height"
        [width]="width"
+       (loadedmetadata)="onLoadedMetaData($event)"
        #video></video>
 <canvas [height]="height"
         [width]="width"
         id="canvas"></canvas>
+
+<div *ngIf="debugMode"
+     class="debug-log">
+  <span>fps: {{ debugFpsActual }}</span>
+  <pre [innerHTML]="debugLog"></pre>
+</div>
