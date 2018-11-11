@@ -25,10 +25,8 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
 
   private openCv: any;
   private openCvCap: any;
-  private openCvDst: any;
   private openCvHigh: any;
   private openCvLow: any;
-  private openCvSrc: any;
 
   @ViewChild("video") private video: ElementRef;
 
@@ -61,38 +59,31 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
 
   public openCvInit(): void {
     this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
-    this.openCvDst = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
-    this.openCvSrc = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
 
-    this.openCvLow = new this.openCv.Mat(this.openCvSrc.rows, this.openCvSrc.cols, this.openCvSrc.type(), [0, 0, 0, 0]);
-    this.openCvHigh = new this.openCv.Mat(this.openCvSrc.rows, this.openCvSrc.cols, this.openCvSrc.type(), [48, 48, 48, 255]);
+    this.openCvLow = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [0, 0, 0, 0]);
+    this.openCvHigh = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [48, 48, 48, 255]);
   }
 
   public openCvLoop(): void {
-    this.openCvCap.read(this.openCvSrc);
-    this.openCv.inRange(this.openCvSrc, this.openCvLow, this.openCvHigh, this.openCvDst);
-    this.openCv.imshow("canvas", this.openCvDst);
+    const contours: any = new this.openCv.MatVector();
+    const hierarchy: any = new this.openCv.Mat();
+    const src: any = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
 
-    // this.openCvCap.read(this.openCvSrc);
-    //
-    // this.openCv.cvtColor(this.openCvSrc, this.openCvDst, this.openCv.COLOR_RGBA2GRAY, 0);
-    // this.openCv.threshold(this.openCvDst, this.openCvDst, 120, 200, this.openCv.THRESH_BINARY);
-    //
-    // const contours: any = new this.openCv.MatVector();
-    // const hierarchy: any = new this.openCv.Mat();
-    //
-    // this.openCv.findContours(this.openCvDst, contours, hierarchy, this.openCv.RETR_CCOMP, this.openCv.CHAIN_APPROX_SIMPLE);
-    //
-    // this.dLog("openCvLoop", "" + contours.size());
-    //
-    // for (let i: number = 0; i < contours.size(); i++) {
-    //   const color: any = new this.openCv.Scalar(255, 0, 0);
-    //   this.openCv.drawContours(this.openCvDst, contours, i, color, 1, this.openCv.LINE_8, hierarchy, 100);
-    // }
-    //
-    // this.openCv.imshow("canvas", this.openCvDst);
-    // contours.delete();
-    // hierarchy.delete();
+    this.openCvCap.read(src);
+    this.openCv.inRange(src, this.openCvLow, this.openCvHigh, src);
+    this.openCv.findContours(src, contours, hierarchy, this.openCv.RETR_CCOMP, this.openCv.CHAIN_APPROX_SIMPLE);
+
+    const dst: any = new this.openCv.Mat.zeros(this.height, this.width, this.openCv.CV_8UC3);
+    for (let i: number = 0; i < contours.size(); i++) {
+      const color: any = new this.openCv.Scalar(255, 255, 255);
+      this.openCv.drawContours(dst, contours, i, color, 1, this.openCv.LINE_8, hierarchy, 100);
+    }
+    this.openCv.imshow("canvas", dst);
+    dst.delete();
+
+    contours.delete();
+    hierarchy.delete();
+    src.delete();
   }
 
   private dLog(label: string, msg: string): void {
@@ -150,7 +141,7 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
       setTimeout(loop, 0);
       this.dLog("init", "openCvLoop: done.");
     }).then(() => {
-      this.dLog("init", "initialized.");
+      this.dLog("init", "done.");
     }).catch(() => {
       this.dLog("init", "failed.");
     });

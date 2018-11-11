@@ -29,11 +29,19 @@ video {
 }
 
 .loading {
+  align-items: center;
+  background-color: #333333;
+  border-radius: 0.5rem;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
   color: #ffffff;
+  display: flex;
+  height: 2rem;
+  justify-content: center;
   left: 0;
+  margin: auto;
+  padding: 0.5rem 1rem;
   position: fixed;
   right: 0;
   top: 0;
+  width: 10rem;
 }
