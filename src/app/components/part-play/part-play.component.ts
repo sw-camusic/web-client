@@ -22,7 +22,6 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
   private isCalledNgAfterViewInit: boolean;
   private isCalledNgOnInit: boolean;
   private isCalledOnLoadedMetaData: boolean;
-  private isLoadedOpenCv: boolean;
 
   private openCv: any;
   private openCvCap: any;
@@ -45,9 +44,11 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     this.debugLog = "";
     this.debugMode = !environment.production;
 
+    this.isLoading = true;
+
     this.isCalledNgAfterViewInit = false;
     this.isCalledNgOnInit = false;
-    this.isLoadedOpenCv = false;
+    this.isCalledOnLoadedMetaData = false;
 
     this.init();
 
@@ -58,65 +59,100 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     this.isCalledOnLoadedMetaData = true;
   }
 
-  public onOpenCvLoop(): void {
-    // this.openCvCap.read(this.openCvSrc);
-    // this.openCv.cvtColor(this.openCvSrc, this.openCvDst, this.openCv.COLOR_RGBA2GRAY);
-    // this.openCv.imshow("canvas", this.openCvDst);
+  public openCvInit(): void {
+    this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
+    this.openCvDst = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
+    this.openCvSrc = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
 
-    // let src = cv.imread('canvasInput');
-    // let dst = new cv.Mat();
-    // let low = new cv.Mat(src.rows, src.cols, src.type(), [0, 0, 0, 0]);
-    // let high = new cv.Mat(src.rows, src.cols, src.type(), [150, 150, 150, 255]);
-    // // You can try more different parameters
-    // cv.inRange(src, low, high, dst);
-    // cv.imshow('canvasOutput', dst);
-    // src.delete(); dst.delete(); low.delete(); high.delete();
+    this.openCvLow = new this.openCv.Mat(this.openCvSrc.rows, this.openCvSrc.cols, this.openCvSrc.type(), [0, 0, 0, 0]);
+    this.openCvHigh = new this.openCv.Mat(this.openCvSrc.rows, this.openCvSrc.cols, this.openCvSrc.type(), [48, 48, 48, 255]);
+  }
 
+  public openCvLoop(): void {
     this.openCvCap.read(this.openCvSrc);
     this.openCv.inRange(this.openCvSrc, this.openCvLow, this.openCvHigh, this.openCvDst);
     this.openCv.imshow("canvas", this.openCvDst);
+
+    // this.openCvCap.read(this.openCvSrc);
+    //
+    // this.openCv.cvtColor(this.openCvSrc, this.openCvDst, this.openCv.COLOR_RGBA2GRAY, 0);
+    // this.openCv.threshold(this.openCvDst, this.openCvDst, 120, 200, this.openCv.THRESH_BINARY);
+    //
+    // const contours: any = new this.openCv.MatVector();
+    // const hierarchy: any = new this.openCv.Mat();
+    //
+    // this.openCv.findContours(this.openCvDst, contours, hierarchy, this.openCv.RETR_CCOMP, this.openCv.CHAIN_APPROX_SIMPLE);
+    //
+    // this.dLog("openCvLoop", "" + contours.size());
+    //
+    // for (let i: number = 0; i < contours.size(); i++) {
+    //   const color: any = new this.openCv.Scalar(255, 0, 0);
+    //   this.openCv.drawContours(this.openCvDst, contours, i, color, 1, this.openCv.LINE_8, hierarchy, 100);
+    // }
+    //
+    // this.openCv.imshow("canvas", this.openCvDst);
+    // contours.delete();
+    // hierarchy.delete();
+  }
+
+  private dLog(label: string, msg: string): void {
+    this.debugLog = new Date().toISOString()
+      + " ["
+      + (label + "                ").substring(0, 16)
+      + "]: "
+      + msg
+      + "<br>"
+      + this.debugLog;
   }
 
   private init(): void {
+    this.dLog("init", "initializing...");
+
     Promise.all([
-      this.initOpenCv(),
       this.initUserMedia(),
       this.initVariable(),
-      this.initVideo(),
       this.loadOpenCv(),
     ]).then(() => {
-      this.log("initialized.");
+      this.dLog("init", "openCvInit: initializing...");
+
+      this.openCv = window["cv"];
+
+      try {
+        this.openCvInit();
+      } catch (e) {
+        this.dLog("init", "openCvInit: " + e);
+        throw e;
+      }
+
+      this.dLog("init", "openCvInit: done.");
+    }).then(() => {
+      this.dLog("init", "openCvLoop: initializing...");
 
       this.isLoading = false;
 
-      this.log("start onOpenCvLoop");
-
+      let last: number = Date.now();
       const loop: () => void = () => {
         const begin: number = Date.now();
-        this.onOpenCvLoop();
-        const end: number = Date.now();
 
-        this.debugFpsActual = Math.round(1000 / (end - begin));
-        setTimeout(loop, 1000 / this.fps - (end - begin));
+        try {
+          this.openCvLoop();
+        } catch (e) {
+          this.dLog("openCvLoop", e);
+          throw e;
+        }
+
+        this.debugFpsActual = Math.round(1000 / (begin - last));
+        last = begin;
+
+        setTimeout(loop, 1000 / this.fps - (Date.now() - begin));
       };
 
-      loop();
-    });
-  }
-
-  private initOpenCv(): Promise<any> {
-    return this.wait(() => {
-      return !this.isLoadedOpenCv || !this.isCalledOnLoadedMetaData;
+      setTimeout(loop, 0);
+      this.dLog("init", "openCvLoop: done.");
     }).then(() => {
-      this.log("initOpenCv: start");
-
-      this.openCv = window["cv"];
-      this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
-      this.openCvDst = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
-      this.openCvSrc = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
-
-      this.openCvLow = new this.openCv.Mat(this.openCvSrc.rows, this.openCvSrc.cols, this.openCvSrc.type(), [0, 0, 0, 0]);
-      this.openCvHigh = new this.openCv.Mat(this.openCvSrc.rows, this.openCvSrc.cols, this.openCvSrc.type(), [128, 255, 255, 255]);
+      this.dLog("init", "initialized.");
+    }).catch(() => {
+      this.dLog("init", "failed.");
     });
   }
 
@@ -124,8 +160,8 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     return this.wait(() => {
       return !this.isCalledNgOnInit;
     }).then(() => {
-      this.log("initUserMedia: start");
-      this.log("initUserMedia: getUserMedia...");
+      this.dLog("initUserMedia", "initializing...");
+      this.dLog("initUserMedia", "getUserMedia...");
 
       return navigator.mediaDevices.getUserMedia({
         audio: false,
@@ -134,14 +170,26 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
           height: 320,
           width: 240,
         },
-      }).then((value: MediaStream) => {
-        this.log("initUserMedia: getUserMedia... succeed.");
-
-        this.video.nativeElement.srcObject = value;
-        this.video.nativeElement.play();
-      }).catch(() => {
-        this.log("initUserMedia: getUserMedia... failed.");
       });
+    }).then((value: MediaStream) => {
+      this.dLog("initUserMedia", "getUserMedia... succeed.");
+
+      this.video.nativeElement.srcObject = value;
+      this.video.nativeElement.play();
+    }).then(() => {
+      return this.wait(() => {
+        return !this.isCalledOnLoadedMetaData;
+      });
+    }).then(() => {
+      this.width = this.video.nativeElement.videoWidth;
+      this.height = this.video.nativeElement.videoHeight;
+
+      this.dLog("initUserMedia", "width = " + this.width);
+      this.dLog("initUserMedia", "height = " + this.height);
+
+      this.dLog("initUserMedia", "done.");
+    }).catch(() => {
+      this.dLog("initUserMedia", "failed.");
     });
   }
 
@@ -149,24 +197,12 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     return this.wait(() => {
       return !this.isCalledNgOnInit;
     }).then(() => {
-      this.log("initVariable: start");
+      this.dLog("initVariable", "initializing...");
 
       this.fps = 30;
-      this.log("initVariable: fps = " + this.fps);
-    });
-  }
+      this.dLog("initVariable", "fps = " + this.fps);
 
-  private initVideo(): Promise<any> {
-    return this.wait(() => {
-      return !this.isCalledOnLoadedMetaData;
-    }).then(() => {
-      this.log("initVideo: start");
-
-      this.width = this.video.nativeElement.videoWidth;
-      this.height = this.video.nativeElement.videoHeight;
-
-      this.log("initVideo: width = " + this.width);
-      this.log("initVideo: height = " + this.height);
+      this.dLog("initVariable", "done.");
     });
   }
 
@@ -174,24 +210,19 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     return this.wait(() => {
       return !this.isCalledNgAfterViewInit;
     }).then(() => {
-      this.log("loadOpenCv: start");
+      this.dLog("loadOpenCv", "loading...");
 
       const script: HTMLElement = document.createElement("script");
       script.setAttribute("async", "");
       script.setAttribute("src", "/assets/opencv.js");
       this.video.nativeElement.parentElement.appendChild(script);
-
+    }).then(() => {
       return this.wait(() => {
         return window["cv"] === undefined || window["cv"].Mat === undefined;
-      }).then(() => {
-        this.log("loadOpenCv: loaded.");
-        this.isLoadedOpenCv = true;
       });
+    }).then(() => {
+      this.dLog("loadOpenCv", "done.");
     });
-  }
-
-  private log(msg: string): void {
-    this.debugLog = new Date().toISOString() + " -- " + msg + "<br>" + this.debugLog;
   }
 
   private wait(until: () => boolean): Promise<any> {
