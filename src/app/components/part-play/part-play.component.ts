@@ -75,8 +75,9 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
 
     const dst: any = new this.openCv.Mat.zeros(this.height, this.width, this.openCv.CV_8UC3);
     for (let i: number = 0; i < contours.size(); i++) {
+      const circle: any = this.openCv.minEnclosingCircle(contours.get(i));
       const color: any = new this.openCv.Scalar(255, 255, 255);
-      this.openCv.drawContours(dst, contours, i, color, 1, this.openCv.LINE_8, hierarchy, 100);
+      this.openCv.circle(dst, circle.center, circle.radius, color);
     }
     this.openCv.imshow("canvas", dst);
     dst.delete();
