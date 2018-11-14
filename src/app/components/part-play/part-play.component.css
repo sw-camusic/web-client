@@ -1,14 +1,20 @@
 canvas  {
-  /*bottom: 0;*/
-  /*left: 0;*/
-  /*margin: auto;*/
-  /*position: fixed;*/
-  /*right: 0;*/
-  /*top: 0;*/
+  bottom: 0;
+  left: 0;
+  margin: auto;
+  position: fixed;
+  right: 0;
+  top: 0;
 }
 
 video {
-  /*display: none;*/
+  border-radius: 0.5rem;
+  bottom: 0;
+  left: 0;
+  margin: auto;
+  position: fixed;
+  right: 0;
+  top: 0;
 }
 
 .debug-log {
@@ -44,4 +50,5 @@ video {
   right: 0;
   top: 0;
   width: 10rem;
+  z-index: 1;
 }

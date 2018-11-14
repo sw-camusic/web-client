@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from "@angular/core";
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from "@angular/core";
 import { environment } from "../../../environments/environment";
 
 @Component({
@@ -6,7 +6,7 @@ import { environment } from "../../../environments/environment";
   styleUrls: ["./part-play.component.css"],
   templateUrl: "./part-play.component.html",
 })
-export class PartPlayComponent implements AfterViewInit, OnInit {
+export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
 
   public debugFpsActual: number;
   public debugLog: string;
@@ -25,8 +25,12 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
 
   private openCv: any;
   private openCvCap: any;
+
+  private openCvAnchor: any;
   private openCvHigh: any;
   private openCvLow: any;
+  private openCvM: any;
+  private openCvMorphologyDefaultBorderValue: any;
 
   @ViewChild("video") private video: ElementRef;
 
@@ -35,6 +39,12 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
 
   public ngAfterViewInit(): void {
     this.isCalledNgAfterViewInit = true;
+  }
+
+  public ngOnDestroy(): void {
+    this.openCvLow.delete();
+    this.openCvHigh.delete();
+    this.openCvM.delete();
   }
 
   public ngOnInit(): void {
@@ -60,8 +70,11 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
   public openCvInit(): void {
     this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
 
+    this.openCvAnchor = new this.openCv.Point(-1, -1);
     this.openCvLow = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [0, 0, 0, 0]);
-    this.openCvHigh = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [48, 48, 48, 255]);
+    this.openCvHigh = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [24, 24, 24, 255]);
+    this.openCvM = this.openCv.Mat.ones(5, 5, this.openCv.CV_8U);
+    this.openCvMorphologyDefaultBorderValue = this.openCv.morphologyDefaultBorderValue();
   }
 
   public openCvLoop(): void {
@@ -70,14 +83,22 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
     const src: any = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
 
     this.openCvCap.read(src);
-    this.openCv.inRange(src, this.openCvLow, this.openCvHigh, src);
-    this.openCv.findContours(src, contours, hierarchy, this.openCv.RETR_CCOMP, this.openCv.CHAIN_APPROX_SIMPLE);
 
-    const dst: any = new this.openCv.Mat.zeros(this.height, this.width, this.openCv.CV_8UC3);
+    this.openCv.inRange(src, this.openCvLow, this.openCvHigh, src);
+    this.openCv.erode(src, src,
+      this.openCvM, this.openCvAnchor, 1, this.openCv.BORDER_CONSTANT, this.openCvMorphologyDefaultBorderValue);
+    this.openCv.dilate(src, src,
+      this.openCvM, this.openCvAnchor, 1, this.openCv.BORDER_CONSTANT, this.openCvMorphologyDefaultBorderValue);
+    this.openCv.findContours(src, contours, hierarchy, this.openCv.RETR_LIST, this.openCv.CHAIN_APPROX_SIMPLE);
+
+    const dst: any = new this.openCv.Mat.zeros(this.height, this.width, this.openCv.CV_8UC4);
+    const color: any = new this.openCv.Scalar(255, 255, 255, 255);
     for (let i: number = 0; i < contours.size(); i++) {
       const circle: any = this.openCv.minEnclosingCircle(contours.get(i));
-      const color: any = new this.openCv.Scalar(255, 255, 255);
-      this.openCv.circle(dst, circle.center, circle.radius, color);
+
+      if (circle.radius > 10) {
+        this.openCv.circle(dst, circle.center, circle.radius, color);
+      }
     }
     this.openCv.imshow("canvas", dst);
     dst.delete();
@@ -100,11 +121,13 @@ export class PartPlayComponent implements AfterViewInit, OnInit {
   private init(): void {
     this.dLog("init", "initializing...");
 
-    Promise.all([
+    const initPromiseList: Promise<any>[] = [
       this.initUserMedia(),
       this.initVariable(),
       this.loadOpenCv(),
-    ]).then(() => {
+    ];
+
+    Promise.all(initPromiseList).then(() => {
       this.dLog("init", "openCvInit: initializing...");
 
       this.openCv = window["cv"];
