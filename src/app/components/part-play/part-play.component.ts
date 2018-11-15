@@ -12,7 +12,10 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
   public debugLog: string;
   public debugMode: boolean;
 
-  public fps: number;
+  public cAudio: string[];
+  public cFps: number;
+  public cHigh: number[];
+  public cLow: number[];
 
   public width: number;
   public height: number;
@@ -71,8 +74,8 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
     this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
 
     this.openCvAnchor = new this.openCv.Point(-1, -1);
-    this.openCvLow = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [0, 0, 0, 0]);
-    this.openCvHigh = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, [24, 24, 24, 255]);
+    this.openCvLow = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, this.cLow);
+    this.openCvHigh = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, this.cHigh);
     this.openCvM = this.openCv.Mat.ones(5, 5, this.openCv.CV_8U);
     this.openCvMorphologyDefaultBorderValue = this.openCv.morphologyDefaultBorderValue();
   }
@@ -98,6 +101,10 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
 
       if (circle.radius > 10) {
         this.openCv.circle(dst, circle.center, circle.radius, color);
+
+        if (circle.center.y > this.height / 2) {
+          this.play(this.cAudio[Math.round(circle.center.x * this.cAudio.length / this.width)]);
+        }
       }
     }
     this.openCv.imshow("canvas", dst);
@@ -159,7 +166,7 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
         this.debugFpsActual = Math.round(1000 / (begin - last));
         last = begin;
 
-        setTimeout(loop, 1000 / this.fps - (Date.now() - begin));
+        setTimeout(loop, 1000 / this.cFps - (Date.now() - begin));
       };
 
       setTimeout(loop, 0);
@@ -203,8 +210,6 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
       this.dLog("initUserMedia", "height = " + this.height);
 
       this.dLog("initUserMedia", "done.");
-    }).catch(() => {
-      this.dLog("initUserMedia", "failed.");
     });
   }
 
@@ -214,8 +219,25 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
     }).then(() => {
       this.dLog("initVariable", "initializing...");
 
-      this.fps = 30;
-      this.dLog("initVariable", "fps = " + this.fps);
+      this.cAudio = [
+        "/assets/audio/c.mp3",
+        "/assets/audio/d.mp3",
+        "/assets/audio/e.mp3",
+        "/assets/audio/f.mp3",
+        "/assets/audio/g.mp3",
+        "/assets/audio/a.mp3",
+        "/assets/audio/b.mp3",
+      ];
+      this.dLog("initVariable", "cAudio = " + this.cAudio.join());
+
+      this.cFps = 30;
+      this.dLog("initVariable", "cFps = " + this.cFps);
+
+      this.cHigh = [24, 24, 24, 255];
+      this.dLog("initVariable", "cHigh = " + this.cHigh.join());
+
+      this.cLow = [0, 0, 0, 0];
+      this.dLog("initVariable", "cLow = " + this.cLow.join());
 
       this.dLog("initVariable", "done.");
     });
@@ -238,6 +260,13 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
     }).then(() => {
       this.dLog("loadOpenCv", "done.");
     });
+  }
+
+  private play(src: string): void {
+    const audioElement: HTMLElement | null = document.querySelector(`audio[src="${src}"]`);
+    if (audioElement !== null) {
+      (<HTMLAudioElement> audioElement.cloneNode()).play();
+    }
   }
 
   private wait(until: () => boolean): Promise<any> {

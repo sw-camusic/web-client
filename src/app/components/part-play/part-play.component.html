@@ -2,6 +2,8 @@
   Loading...
 </div>
 
+<audio *ngFor="let audio of cAudio"
+       [src]="audio"></audio>
 <video [height]="height"
        [width]="width"
        (loadedmetadata)="onLoadedMetaData($event)"
