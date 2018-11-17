@@ -1,19 +1,19 @@
-<div [ngClass]="{ loaded: !isLoading, loading: isLoading }">
+<div [ngClass]="{ loading: !oCvIsReady, ready: oCvIsReady }">
   Loading...
 </div>
 
-<audio *ngFor="let audio of cAudio"
-       [src]="audio"></audio>
-<video [height]="height"
-       [width]="width"
-       (loadedmetadata)="onLoadedMetaData($event)"
+<audio *ngFor="let src of iAudioSrcList"
+       [src]="src"></audio>
+
+<video [height]="oSystemHeight"
+       [width]="oSystemWidth"
        #video></video>
 
-<div *ngIf="debugMode"
+<div *ngIf="iDebugMode"
      class="debug-log">
-  <span>fps: {{ debugFpsActual }}</span>
-  <pre [innerHTML]="debugLog"></pre>
-  <canvas [height]="height"
-          [width]="width"
+  <span>fps: {{ oDebugFps }}</span>
+  <pre [innerHTML]="oDebugLog"></pre>
+  <canvas [height]="oSystemHeight"
+          [width]="oSystemWidth"
           id="canvas"></canvas>
 </div>

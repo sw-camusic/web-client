@@ -8,278 +8,284 @@ import { environment } from "../../../environments/environment";
 })
 export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
 
-  public debugFpsActual: number;
-  public debugLog: string;
-  public debugMode: boolean;
+  public iAudioCacheDepth: number;
+  public iAudioSrcList: string[];
 
-  public cAudio: string[];
-  public cFps: number;
-  public cHigh: number[];
-  public cLow: number[];
+  public iCvHigh: number[];
+  public iCvLow: number[];
+  public iCvSrc: string;
 
-  public width: number;
-  public height: number;
+  public iDebugMode: boolean;
 
-  public isLoading: boolean;
+  public iSystemFps: number;
+  public iSystemHeight: number;
+  public iSystemWidth: number;
 
-  private isCalledNgAfterViewInit: boolean;
-  private isCalledNgOnInit: boolean;
-  private isCalledOnLoadedMetaData: boolean;
+  public oCvIsReady: boolean;
 
-  private openCv: any;
-  private openCvCap: any;
+  public oDebugFps: number;
+  public oDebugLog: string;
 
-  private openCvAnchor: any;
-  private openCvHigh: any;
-  private openCvLow: any;
-  private openCvM: any;
-  private openCvMorphologyDefaultBorderValue: any;
+  public oSystemHeight: number;
+  public oSystemWidth: number;
 
-  @ViewChild("video") private video: ElementRef;
+  @ViewChild("video")
+  private eVideo: ElementRef;
+
+  private mAudioCache: HTMLAudioElement[][];
+
+  private mCv: any;
+  private mCvAnchor: any;
+  private mCvCap: any;
+  private mCvHigh: any;
+  private mCvLow: any;
+  private mCvM: any;
+  private mCvMorphologyDefaultBorderValue: any;
 
   public constructor() {
+    this.iAudioCacheDepth = 8;
+    this.iAudioSrcList = [
+      "/assets/audio/c.mp3",
+      "/assets/audio/d.mp3",
+      "/assets/audio/e.mp3",
+      "/assets/audio/f.mp3",
+      "/assets/audio/g.mp3",
+      "/assets/audio/a.mp3",
+      "/assets/audio/b.mp3",
+    ];
+
+    this.iCvHigh = [24, 24, 24, 255];
+    this.iCvLow = [0, 0, 0, 0];
+    this.iCvSrc = "/assets/opencv.js";
+
+    this.iDebugMode = !environment.production;
+
+    this.iSystemFps = 30;
+    this.iSystemHeight = 320;
+    this.iSystemWidth = 240;
+
+    this.oCvIsReady = false;
+
+    this.oDebugFps = 0;
+    this.oDebugLog = "";
+
+    this.oSystemHeight = 0;
+    this.oSystemWidth = 0;
   }
 
   public ngAfterViewInit(): void {
-    this.isCalledNgAfterViewInit = true;
+    this.async(() => {
+      this.debugInit();
+      this.systemInit();
+      this.audioInit();
+      this.cvInit();
+    });
   }
 
   public ngOnDestroy(): void {
-    this.openCvLow.delete();
-    this.openCvHigh.delete();
-    this.openCvM.delete();
+    this.async(() => {
+      this.cvDestroy();
+      this.audioDestroy();
+      this.systemDestroy();
+      this.debugDestroy();
+    });
   }
 
   public ngOnInit(): void {
-    this.debugFpsActual = 0;
-    this.debugLog = "";
-    this.debugMode = !environment.production;
-
-    this.isLoading = true;
-
-    this.isCalledNgAfterViewInit = false;
-    this.isCalledNgOnInit = false;
-    this.isCalledOnLoadedMetaData = false;
-
-    this.init();
-
-    this.isCalledNgOnInit = true;
   }
 
-  public onLoadedMetaData(): void {
-    this.isCalledOnLoadedMetaData = true;
+  private async(fn: () => void): Promise<any> {
+    return this.wait(0).then(fn);
   }
 
-  public openCvInit(): void {
-    this.openCvCap = new this.openCv.VideoCapture(this.video.nativeElement);
-
-    this.openCvAnchor = new this.openCv.Point(-1, -1);
-    this.openCvLow = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, this.cLow);
-    this.openCvHigh = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4, this.cHigh);
-    this.openCvM = this.openCv.Mat.ones(5, 5, this.openCv.CV_8U);
-    this.openCvMorphologyDefaultBorderValue = this.openCv.morphologyDefaultBorderValue();
+  private audioDestroy(): void {
+    this.debugLog("audio", "destroy ....");
+    this.debugLog("audio", "destroy done");
   }
 
-  public openCvLoop(): void {
-    const contours: any = new this.openCv.MatVector();
-    const hierarchy: any = new this.openCv.Mat();
-    const src: any = new this.openCv.Mat(this.height, this.width, this.openCv.CV_8UC4);
+  private audioInit(): void {
+    this.debugLog("audio", "init ....");
 
-    this.openCvCap.read(src);
+    this.audioReCache();
 
-    this.openCv.inRange(src, this.openCvLow, this.openCvHigh, src);
-    this.openCv.erode(src, src,
-      this.openCvM, this.openCvAnchor, 1, this.openCv.BORDER_CONSTANT, this.openCvMorphologyDefaultBorderValue);
-    this.openCv.dilate(src, src,
-      this.openCvM, this.openCvAnchor, 1, this.openCv.BORDER_CONSTANT, this.openCvMorphologyDefaultBorderValue);
-    this.openCv.findContours(src, contours, hierarchy, this.openCv.RETR_LIST, this.openCv.CHAIN_APPROX_SIMPLE);
+    this.debugLog("audio", "init done");
+  }
 
-    const dst: any = new this.openCv.Mat.zeros(this.height, this.width, this.openCv.CV_8UC4);
-    const color: any = new this.openCv.Scalar(255, 255, 255, 255);
-    for (let i: number = 0; i < contours.size(); i++) {
-      const circle: any = this.openCv.minEnclosingCircle(contours.get(i));
+  private audioPlay(index: number): void {
+    if (index < 0 || this.iAudioSrcList.length <= index) {
+      return;
+    }
 
-      if (circle.radius > 10) {
-        this.openCv.circle(dst, circle.center, circle.radius, color);
+    const cache: HTMLAudioElement | undefined = this.mAudioCache[index].shift();
+    if (cache !== undefined) {
+      cache.play();
+    }
 
-        if (circle.center.y > this.height / 2) {
-          this.play(this.cAudio[Math.round(circle.center.x * this.cAudio.length / this.width)]);
+    const audio: HTMLElement | null = document.querySelector(`audio[src="${this.iAudioSrcList[index]}"]`);
+    if (audio !== null) {
+      this.mAudioCache[index].push(<HTMLAudioElement> audio.cloneNode());
+    }
+  }
+
+  private audioReCache(): void {
+    this.mAudioCache = [];
+    this.iAudioSrcList.forEach((src: string, index: number) => {
+      this.mAudioCache[index] = [];
+
+      const audio: HTMLElement | null = document.querySelector(`audio[src="${src}"]`);
+      if (audio !== null) {
+        for (let i: number = 0; i < this.iAudioCacheDepth; i++) {
+          this.mAudioCache[index].push(<HTMLAudioElement> audio.cloneNode());
         }
       }
+    });
+  }
+
+  private cvDestroy(): void {
+    this.debugLog("cv", "destroy ....");
+
+    this.mCvHigh.delete();
+    this.mCvLow.delete();
+    this.mCvM.delete();
+
+    this.debugLog("cv", "destroy done");
+  }
+
+  private cvInit(): void {
+    this.debugLog("cv", "init ....");
+
+    const script: HTMLElement = document.createElement("script");
+    script.setAttribute("async", "");
+    script.setAttribute("src", this.iCvSrc);
+    this.eVideo.nativeElement.parentElement.appendChild(script);
+
+    let cvLoopLast: number = Date.now();
+    const cvLoop: () => void = () => {
+      const begin: number = Date.now();
+      this.cvUpdate();
+      this.wait(1000 / this.iSystemFps - (Date.now() - begin)).then(cvLoop);
+
+      this.oDebugFps = Math.round(1000 / (begin - cvLoopLast));
+      cvLoopLast = begin;
+    };
+
+    const cvWait: () => void = () => {
+      if (window["cv"] === undefined
+        || window["cv"].Mat === undefined
+        || this.eVideo.nativeElement.srcObject === null) {
+        this.wait(100).then(cvWait);
+      } else {
+        this.mCv = window["cv"];
+        this.mCvAnchor = new this.mCv.Point(-1, -1);
+        this.mCvCap = new this.mCv.VideoCapture(this.eVideo.nativeElement);
+        this.mCvHigh = new this.mCv.Mat(this.oSystemHeight, this.oSystemWidth, this.mCv.CV_8UC4, this.iCvHigh);
+        this.mCvLow = new this.mCv.Mat(this.oSystemHeight, this.oSystemWidth, this.mCv.CV_8UC4, this.iCvLow);
+        this.mCvM = this.mCv.Mat.ones(5, 5, this.mCv.CV_8U);
+        this.mCvMorphologyDefaultBorderValue = this.mCv.morphologyDefaultBorderValue();
+
+        this.oCvIsReady = true;
+
+        this.debugLog("cv", "init done");
+
+        this.async(cvLoop);
+      }
+    };
+
+    this.async(cvWait);
+  }
+
+  private cvUpdate(): void {
+    const contours: any = new this.mCv.MatVector();
+    const dst: any = this.iDebugMode ? new this.mCv.Mat.zeros(this.oSystemHeight, this.oSystemWidth, this.mCv.CV_8UC4) : null;
+    const dstColor: any = this.iDebugMode ?  new this.mCv.Scalar(255, 255, 255, 255) : null;
+    const hierarchy: any = new this.mCv.Mat();
+    const src: any = new this.mCv.Mat(this.oSystemHeight, this.oSystemWidth, this.mCv.CV_8UC4);
+
+    this.mCvCap.read(src);
+
+    this.mCv.inRange(src, this.mCvLow, this.mCvHigh, src);
+    this.mCv.erode(src, src, this.mCvM, this.mCvAnchor, 1, this.mCv.BORDER_CONSTANT, this.mCvMorphologyDefaultBorderValue);
+    this.mCv.dilate(src, src, this.mCvM, this.mCvAnchor, 1, this.mCv.BORDER_CONSTANT, this.mCvMorphologyDefaultBorderValue);
+    this.mCv.findContours(src, contours, hierarchy, this.mCv.RETR_LIST, this.mCv.CHAIN_APPROX_SIMPLE);
+
+    for (let i: number = 0; i < contours.size(); i++) {
+      const circle: any = this.mCv.minEnclosingCircle(contours.get(i));
+
+      if (circle.radius > 10 && circle.center.y > this.oSystemHeight / 2) {
+        this.audioPlay(Math.round(circle.center.x * this.iAudioSrcList.length / this.oSystemWidth));
+      }
+
+      if (this.iDebugMode && circle.radius > 10) {
+        this.mCv.circle(dst, circle.center, circle.radius, dstColor);
+      }
     }
-    this.openCv.imshow("canvas", dst);
-    dst.delete();
+
+    if (this.iDebugMode) {
+      this.mCv.imshow("canvas", dst);
+      dst.delete();
+    }
 
     contours.delete();
     hierarchy.delete();
     src.delete();
   }
 
-  private dLog(label: string, msg: string): void {
-    this.debugLog = new Date().toISOString()
-      + " ["
-      + (label + "                ").substring(0, 16)
-      + "]: "
-      + msg
-      + "<br>"
-      + this.debugLog;
+  private debugDestroy(): void {
   }
 
-  private init(): void {
-    this.dLog("init", "initializing...");
-
-    const initPromiseList: Promise<any>[] = [
-      this.initUserMedia(),
-      this.initVariable(),
-      this.loadOpenCv(),
-    ];
-
-    Promise.all(initPromiseList).then(() => {
-      this.dLog("init", "openCvInit: initializing...");
-
-      this.openCv = window["cv"];
-
-      try {
-        this.openCvInit();
-      } catch (e) {
-        this.dLog("init", "openCvInit: " + e);
-        throw e;
-      }
-
-      this.dLog("init", "openCvInit: done.");
-    }).then(() => {
-      this.dLog("init", "openCvLoop: initializing...");
-
-      this.isLoading = false;
-
-      let last: number = Date.now();
-      const loop: () => void = () => {
-        const begin: number = Date.now();
-
-        try {
-          this.openCvLoop();
-        } catch (e) {
-          this.dLog("openCvLoop", e);
-          throw e;
-        }
-
-        this.debugFpsActual = Math.round(1000 / (begin - last));
-        last = begin;
-
-        setTimeout(loop, 1000 / this.cFps - (Date.now() - begin));
-      };
-
-      setTimeout(loop, 0);
-      this.dLog("init", "openCvLoop: done.");
-    }).then(() => {
-      this.dLog("init", "done.");
-    }).catch(() => {
-      this.dLog("init", "failed.");
-    });
+  private debugInit(): void {
   }
 
-  private initUserMedia(): Promise<any> {
-    return this.wait(() => {
-      return !this.isCalledNgOnInit;
-    }).then(() => {
-      this.dLog("initUserMedia", "initializing...");
-      this.dLog("initUserMedia", "getUserMedia...");
-
-      return navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: "environment",
-          height: 320,
-          width: 240,
-        },
-      });
-    }).then((value: MediaStream) => {
-      this.dLog("initUserMedia", "getUserMedia... succeed.");
-
-      this.video.nativeElement.srcObject = value;
-      this.video.nativeElement.play();
-    }).then(() => {
-      return this.wait(() => {
-        return !this.isCalledOnLoadedMetaData;
-      });
-    }).then(() => {
-      this.width = this.video.nativeElement.videoWidth;
-      this.height = this.video.nativeElement.videoHeight;
-
-      this.dLog("initUserMedia", "width = " + this.width);
-      this.dLog("initUserMedia", "height = " + this.height);
-
-      this.dLog("initUserMedia", "done.");
-    });
-  }
-
-  private initVariable(): Promise<any> {
-    return this.wait(() => {
-      return !this.isCalledNgOnInit;
-    }).then(() => {
-      this.dLog("initVariable", "initializing...");
-
-      this.cAudio = [
-        "/assets/audio/c.mp3",
-        "/assets/audio/d.mp3",
-        "/assets/audio/e.mp3",
-        "/assets/audio/f.mp3",
-        "/assets/audio/g.mp3",
-        "/assets/audio/a.mp3",
-        "/assets/audio/b.mp3",
-      ];
-      this.dLog("initVariable", "cAudio = " + this.cAudio.join());
-
-      this.cFps = 30;
-      this.dLog("initVariable", "cFps = " + this.cFps);
-
-      this.cHigh = [24, 24, 24, 255];
-      this.dLog("initVariable", "cHigh = " + this.cHigh.join());
-
-      this.cLow = [0, 0, 0, 0];
-      this.dLog("initVariable", "cLow = " + this.cLow.join());
-
-      this.dLog("initVariable", "done.");
-    });
-  }
-
-  private loadOpenCv(): Promise<any> {
-    return this.wait(() => {
-      return !this.isCalledNgAfterViewInit;
-    }).then(() => {
-      this.dLog("loadOpenCv", "loading...");
-
-      const script: HTMLElement = document.createElement("script");
-      script.setAttribute("async", "");
-      script.setAttribute("src", "/assets/opencv.js");
-      this.video.nativeElement.parentElement.appendChild(script);
-    }).then(() => {
-      return this.wait(() => {
-        return window["cv"] === undefined || window["cv"].Mat === undefined;
-      });
-    }).then(() => {
-      this.dLog("loadOpenCv", "done.");
-    });
-  }
-
-  private play(src: string): void {
-    const audioElement: HTMLElement | null = document.querySelector(`audio[src="${src}"]`);
-    if (audioElement !== null) {
-      (<HTMLAudioElement> audioElement.cloneNode()).play();
+  private debugLog(label: string, message: string): void {
+    if (this.iDebugMode) {
+      this.oDebugLog = new Date().toISOString()
+        + " ["
+        + (label + "        ").substring(0, 8)
+        + "]: "
+        + message
+        + "<br>"
+        + this.oDebugLog;
     }
   }
 
-  private wait(until: () => boolean): Promise<any> {
-    return new Promise((resolve: () => void) => {
-      const loop: () => void = () => {
-        if (until()) {
-          setTimeout(loop, 1000);
-        } else {
-          resolve();
-        }
-      };
+  private systemDestroy(): void {
+    this.debugLog("system", "destroy ....");
+    this.debugLog("system", "destroy done")
+  }
 
-      loop();
+  private systemInit(): void {
+    this.debugLog("system", "init ....");
+
+    navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: "environment",
+        height: this.iSystemHeight,
+        width: this.iSystemWidth,
+      },
+    }).then((stream: MediaStream) => {
+      return new Promise((resolve: () => void) => {
+        const callback: () => void = () => {
+          this.eVideo.nativeElement.removeEventListener("loadedmetadata", callback);
+          resolve();
+        };
+
+        this.eVideo.nativeElement.addEventListener("loadedmetadata", callback);
+
+        this.eVideo.nativeElement.srcObject = stream;
+        this.eVideo.nativeElement.play();
+      });
+    }).then(() => {
+      this.oSystemHeight = this.eVideo.nativeElement.videoHeight;
+      this.oSystemWidth = this.eVideo.nativeElement.videoWidth;
+
+      this.debugLog("system", "init done");
+    });
+  }
+
+  private wait(delay: number): Promise<any> {
+    return new Promise((resolve: () => void) => {
+      setTimeout(resolve, delay);
     });
   }
 
