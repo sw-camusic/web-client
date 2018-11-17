@@ -250,7 +250,7 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
 
   private systemDestroy(): void {
     this.debugLog("system", "destroy ....");
-    this.debugLog("system", "destroy done")
+    this.debugLog("system", "destroy done");
   }
 
   private systemInit(): void {
