@@ -240,12 +240,12 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
         let dMin: number = this.iCvDistanceThreshold * this.iCvDistanceThreshold;
         let index: number | null = null;
 
-        this.mCvTrackingLog.forEach((value: { x: number, y: number }[], i: number) => {
+        this.mCvTrackingLog.forEach((value: { x: number, y: number }[], idx: number) => {
           const d: number = (circle.center.x - value[0].x) * (circle.center.x - value[0].x)
             + (circle.center.y - value[0].y) * (circle.center.y - value[0].y);
           if (dMin > d) {
             dMin = d;
-            index = i;
+            index = idx;
           }
         });
 
