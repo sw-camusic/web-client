@@ -63,18 +63,18 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
 
     this.iCvAThreshold = 0.02;
     this.iCvDistanceThreshold = 400;
-    this.iCvHigh = [42, 42, 42, 255];
-    this.iCvLow = [0, 0, 0, 0];
-    this.iCvRadiusMax = 40;
+    this.iCvHigh = [255, 86, 86, 255];
+    this.iCvLow = [160, 4, 4, 0];
+    this.iCvRadiusMax = 80;
     this.iCvRadiusMin = 8;
     this.iCvSrc = "/assets/opencv.js";
-    this.iCvYThreshold = 140;
+    this.iCvYThreshold = 450;
 
     this.iDebugMode = !environment.production;
 
     this.iSystemFps = 30;
-    this.iSystemHeight = 240;
-    this.iSystemWidth = 320;
+    this.iSystemHeight = 720;
+    this.iSystemWidth = 1280;
 
     this.oCvIsReady = false;
 
@@ -128,8 +128,6 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
     if (index < 0 || this.iAudioSrcList.length <= index) {
       return;
     }
-
-    this.debugLog("audio", "play " + index);
 
     const cache: HTMLAudioElement | undefined = this.mAudioCache[index].shift();
     if (cache !== undefined) {
@@ -220,6 +218,7 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
 
     this.mCvCap.read(src);
 
+    this.mCv.flip(src, src, 1);
     this.mCv.inRange(src, this.mCvLow, this.mCvHigh, src);
     this.mCv.erode(src, src, this.mCvM, this.mCvAnchor, 1, this.mCv.BORDER_CONSTANT, this.mCvMorphologyDefaultBorderValue);
     this.mCv.dilate(src, src, this.mCvM, this.mCvAnchor, 1, this.mCv.BORDER_CONSTANT, this.mCvMorphologyDefaultBorderValue);
@@ -346,7 +345,7 @@ export class PartPlayComponent implements AfterViewInit, OnDestroy, OnInit {
     navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
-        facingMode: "environment",
+        facingMode: "user",
         height: this.iSystemHeight,
         width: this.iSystemWidth,
       },
